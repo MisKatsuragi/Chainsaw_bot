@@ -3,14 +3,16 @@ from common_utils import send_message, is_admin, parse_target_user, get_user_lin
 from config import HOST
 from database import db
 
+
 # Назначение первого админа, в соотвествии с законом робототехники 
 # Человек всегда должен быть главнее машины
-def make_god(event, vk_session, admins, peer_id):
+def make_god(event, vk_session, admins, peer_id, god):
     user_id = event.user_id
     if admins:
         send_message(vk_session, peer_id, "❌ You are NOT a God!")
         return
     admins.add(user_id)
+    god.add(user_id)
     user_link = get_user_link(user_id)
     send_message(vk_session, peer_id, f"✅ {user_link} = GOD!")
     print(f"Создатель: {user_id}")

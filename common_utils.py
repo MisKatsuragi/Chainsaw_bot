@@ -15,6 +15,9 @@ def get_current_time():
 def is_admin(user_id, admins):
     return user_id in admins
 
+def is_god(user_id, god):
+    return user_id in god
+
 def get_user_link(user_id, vk_session=None, name=None):
     """Создает кликабельную ссылку @id"""
     if name:

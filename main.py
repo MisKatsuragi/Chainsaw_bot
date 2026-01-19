@@ -4,12 +4,13 @@ import time
 from common_utils import send_message, is_admin, get_peer_id
 from user_commands import USER_COMMANDS
 from admin_commands import ADMIN_COMMANDS
-from database import db
+from god_commands import GOD_COMMANDS
 from config import VK_TOKEN, HOST
 
 vk_session = vk_api.VkApi(token=VK_TOKEN)
 longpoll = VkLongPoll(vk_session)
 admins = set()
+god=set()
 itsMe = True
 
 def handle_message(event):
@@ -21,13 +22,15 @@ def handle_message(event):
     
     # 1. /god команда
     if msg == "/god":
-        ADMIN_COMMANDS["/god"](event, vk_session, admins, peer_id)
+        ADMIN_COMMANDS["/god"](event, vk_session, admins, peer_id, god)
         return
     
     # 2. Админ команды
     if msg.startswith('/') and is_admin(user_id, admins):
         cmd = msg.split()[0]
-        if cmd in ADMIN_COMMANDS:
+        if cmd in GOD_COMMANDS:
+            GOD_COMMANDS[cmd](event, vk_session, admins, peer_id, god)
+        elif cmd in ADMIN_COMMANDS:
             ADMIN_COMMANDS[cmd](event, vk_session, admins, peer_id)
         else:
             send_message(vk_session, peer_id, "❓")
