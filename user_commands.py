@@ -1,11 +1,14 @@
 from common_utils import send_message, get_current_time, is_admin, format_item
-from database import db
+from data_manager import dm  # ✅ Импорт DataManager вместо db
+
 
 def hi_command(event, vk_session, _, peer_id):
     send_message(vk_session, peer_id, "Hi friend!")
 
+
 def time_command(event, vk_session, _, peer_id):
     send_message(vk_session, peer_id, f"⏰ Текущее время: {get_current_time()}")
+
 
 def help_command(event, vk_session, admins, peer_id):
     user_id = event.user_id
@@ -19,12 +22,14 @@ def help_command(event, vk_session, admins, peer_id):
     
     send_message(vk_session, peer_id, help_text)
 
+
 def balance_command(event, vk_session, _, peer_id):
-    user = db.get_user(event.user_id)
+    user = dm.get_user(event.user_id)  # ✅ dm.get_user вместо db.get_user
     send_message(vk_session, peer_id, f"💰 Баланс: {user.coins} монет")
 
+
 def market_command(event, vk_session, _, peer_id):
-    items = db.get_market_items()
+    items = dm.market_items  # ✅ dm.market_items вместо db.get_market_items()
     if not items:
         send_message(vk_session, peer_id, "🏪 Рынок пуст")
         return
@@ -34,6 +39,7 @@ def market_command(event, vk_session, _, peer_id):
         market_text += f"#{item.index}: {format_item(item)}\n"
     send_message(vk_session, peer_id, market_text)
 
+
 def buy_command(event, vk_session, _, peer_id):
     try:
         parts = event.text.lower().split(maxsplit=1)
@@ -41,10 +47,11 @@ def buy_command(event, vk_session, _, peer_id):
             send_message(vk_session, peer_id, "❓ buy <название/номер>")
             return
         
-        result = db.buy_item(event.user_id, parts[1])
+        result = dm.buy_item(event.user_id, parts[1])  # ✅ dm.buy_item
         send_message(vk_session, peer_id, result)
     except Exception as e:
         send_message(vk_session, peer_id, "❌ Ошибка покупки")
+
 
 def sell_command(event, vk_session, _, peer_id):
     try:
@@ -53,13 +60,14 @@ def sell_command(event, vk_session, _, peer_id):
             send_message(vk_session, peer_id, "❓ sell <название/номер>")
             return
         
-        result = db.sell_item(event.user_id, parts[1])
+        result = dm.sell_item(event.user_id, parts[1])  # ✅ dm.sell_item
         send_message(vk_session, peer_id, result)
     except Exception:
         send_message(vk_session, peer_id, "❌ Ошибка продажи")
 
+
 def inventory_command(event, vk_session, _, peer_id):
-    user = db.get_user(event.user_id)
+    user = dm.get_user(event.user_id)  # ✅ dm.get_user
     if not user.items:
         send_message(vk_session, peer_id, "🎒 Инвентарь пуст")
         return
@@ -69,6 +77,7 @@ def inventory_command(event, vk_session, _, peer_id):
         inv_text += f"#{user_index}: {item.name} (#{item.index})\n"
     inv_text += f"💰 {user.coins} монет"
     send_message(vk_session, peer_id, inv_text)
+
 
 USER_COMMANDS = {
     "hi": hi_command, "time": time_command, "help": help_command,

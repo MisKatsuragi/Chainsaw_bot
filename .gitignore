@@ -1,3 +1,6 @@
-requirements.txt
+database_export.xlsx
+database.json
 config.py
+*.json
+*.backup
 __pycache__

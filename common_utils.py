@@ -1,6 +1,8 @@
 import random
 import time
 import re
+from data_manager import dm
+
 
 def send_message(vk_session, peer_id, message):
     vk_session.method("messages.send", {
@@ -13,7 +15,7 @@ def get_current_time():
     return time.strftime('%H:%M:%S')
 
 def is_admin(user_id, admins):
-    return user_id in admins
+    return user_id in dm.admins or user_id in dm.god
 
 def is_god(user_id, god):
     return user_id in god

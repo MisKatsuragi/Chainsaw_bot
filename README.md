@@ -15,8 +15,13 @@ autoDicstring - Python
 
 ## Установка окружение ВК в терминале
 
-Основное:
+Основно:
+Из файла, одной командой сразу всё:
+pip install -r requirements.txt
+
+По отдельности:
 python3 -m pip install vk_api python-dotenv
+py -m pip install openpyxl (для экселя)
 
 Если будет ругаться выставить политику для скриптов:
 Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned

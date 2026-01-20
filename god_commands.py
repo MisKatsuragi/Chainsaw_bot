@@ -1,5 +1,9 @@
 import sys
+import os
+import time
+import shutil
 from common_utils import send_message, parse_target_user, get_user_link, is_god
+from data_manager import dm
 
 # Назначение пользователя админом
 def promote_to_admin(event, vk_session, admins, peer_id, god):
@@ -85,10 +89,64 @@ def transfer_god(event, vk_session, admins, peer_id, god):
     except:
         send_message(vk_session, peer_id, "❓ /youGod [ссылка/@username/id]")
 
+    # Сброс ВСЕЙ конфигурации в изначальное состояние
+def reset_all_command(event, vk_session, admins, peer_id, god):
+    user_id = event.user_id
+    
+    if not is_god(user_id, god):
+        send_message(vk_session, peer_id, "❌ Только Бог может уничтожить мир!")
+        return
+    
+    user_link = get_user_link(user_id)
+    
+    try:
+        # ✅ 1. Создаем бэкап текущих данных
+        backup_name = f"backup_{int(time.time())}.json"
+        shutil.copy2("database.json", backup_name)
+        
+        # ✅ 2. Полный сброс базы данных
+        db = dm.db
+        db.users.clear()
+        db.market_items.clear()
+        db.market_index = 1
+        db.user_next_index.clear()
+        db.admins.clear()
+        db.god.clear()
+        
+        # ✅ 3. Восстанавливаем Бога
+        # db.admins.add(user_id)
+        # db.god.add(user_id)
+        # db.set_user_position(user_id, "god")
+        
+        # ✅ 4. Переинициализируем рынок
+        db.init_market()
+        
+        # ✅ 5. Принудительное сохранение
+        dm.mark_dirty()
+        dm.save_to_file()
+        
+        message = (f"💥 **МИР УНИЧТОЖЕН И ВОССТАНОВЛЕН**\n\n"
+                  f"👑 Бог {user_link} сотворил новый мир!\n\n"
+                  f"📊 **Состояние новой вселенной:**\n"
+                  f"👤 Пользователей: 0\n"
+                  f"🎒 Предметов на рынке: 3\n"
+                  f"💰 Экономика: 0 монет\n"
+                  f"📦 Бэкап: `{backup_name}`\n\n"
+                  f"✨ Готово к новой игре!")
+        
+        send_message(vk_session, peer_id, message)
+        print(f"🌍 Бог {user_id} сбросил мир. Бэкап: {backup_name}")
+        
+    except Exception as e:
+        send_message(vk_session, peer_id, f"❌ Ошибка апокалипсиса: {str(e)}")
+        print(f"Ошибка сброса: {e}")
+
+
 # Словарь команд Бога
 GOD_COMMANDS = {
     "/admin": promote_to_admin,
     "/unadmin": demote_admin,
     "/deleteall": demote_all_admins,
     "/yougod": transfer_god,
+    "/resetall": reset_all_command 
 }
