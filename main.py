@@ -1,14 +1,17 @@
 import vk_api
 from vk_api.longpoll import VkLongPoll, VkEventType
+import sys
+import os
 import time
 from common_utils import send_message, is_admin, get_peer_id
-from data_manager import dm
+from storege.data_manager import dm # ✅ Глобальный dm
 from user_commands import USER_COMMANDS
 from data_commands import DATA_COMMANDS
 from admin_commands import ADMIN_COMMANDS, handle_data_command
 from god_commands import GOD_COMMANDS
 from config import VK_TOKEN, HOST
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 vk_session = vk_api.VkApi(token=VK_TOKEN)
 longpoll = VkLongPoll(vk_session)
 admins = dm.admins
@@ -49,7 +52,6 @@ def handle_message(event):
             func(event, vk_session, admins, peer_id)
             return
 
-print("🚀 Бот запущен! ")
 while True:
     try:
         for event in longpoll.listen():

@@ -1,4 +1,4 @@
-from data_manager import DataManager
+from .data_manager import DataManager
 
 def StoreUsersData(dm: DataManager):  # ✅ Принимает dm
     if dm.save_to_file():

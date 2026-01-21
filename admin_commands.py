@@ -1,7 +1,7 @@
 import sys
 from common_utils import send_message, is_admin, parse_target_user, get_user_link
 from config import HOST
-from data_manager import dm  # ✅ Правильный импорт
+from storege.data_manager import dm  # ✅ Правильный импорт
 from data_commands import DATA_COMMANDS
 
 

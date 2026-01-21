@@ -1,6 +1,10 @@
+import sys
+import os
 from openpyxl import Workbook
-from data_manager import DataManager, dm
-from database import Item 
+from .data_manager import DataManager, dm
+from database import Item
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def ExcelExport(dm: DataManager, path: str = "database_export.xlsx"):  # ✅ Принимает dm
     """Экспорт всех данных в Excel"""

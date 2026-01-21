@@ -1,4 +1,4 @@
-from data_manager import DataManager
+from .data_manager import DataManager
 
 def LoadUsersData(dm: DataManager):  # ✅ Принимает dm
     if dm.load_from_file():

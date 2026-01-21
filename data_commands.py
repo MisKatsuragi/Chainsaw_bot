@@ -1,7 +1,7 @@
-from store_data import StoreUsersData
-from load_data import LoadUsersData, ReloadUsersData
-from excel_export import ExcelExport
-from data_manager import dm  # ✅ Глобальный dm
+from storege.store_data import StoreUsersData
+from storege.load_data import LoadUsersData, ReloadUsersData
+from storege.excel_export import ExcelExport
+from storege.data_manager import dm  # ✅ Глобальный dm
 
 
 def get_economy_stats_message() -> str:

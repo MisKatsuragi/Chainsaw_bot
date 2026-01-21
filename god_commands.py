@@ -1,9 +1,7 @@
-import sys
-import os
 import time
 import shutil
 from common_utils import send_message, parse_target_user, get_user_link, is_god
-from data_manager import dm
+from storege.data_manager import dm # ✅ Глобальный dm
 
 # Назначение пользователя админом
 def promote_to_admin(event, vk_session, admins, peer_id, god):

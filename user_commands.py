@@ -1,5 +1,5 @@
 from common_utils import send_message, get_current_time, is_admin, format_item
-from data_manager import dm  # ✅ Импорт DataManager вместо db
+from storege.data_manager import dm # ✅ Глобальный dm
 
 
 def hi_command(event, vk_session, _, peer_id):

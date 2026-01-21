@@ -1,7 +1,7 @@
 import random
 import time
 import re
-from data_manager import dm
+from storege.data_manager import dm # ✅ Глобальный dm
 
 
 def send_message(vk_session, peer_id, message):

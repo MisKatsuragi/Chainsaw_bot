@@ -1,8 +1,9 @@
+import sys
+import os
 import json
 import threading
 import time
 import atexit
-import os
 import shutil
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -137,4 +138,4 @@ class DataManager:
     
 # ✅ ГЛОБАЛЬНЫЙ ОБЪЕКТ dm создаётся при импорте модуля
 # Все бэкапы теперь сохраняются в папку "backups/"
-dm = DataManager("database.json", backups_dir="backups")
+dm = DataManager("database.json", backups_dir="../backups")
