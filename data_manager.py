@@ -4,17 +4,24 @@ import time
 import atexit
 import os
 import shutil
+from pathlib import Path
 from typing import Dict, List, Optional
 from database import Database, Item, UserData, UserStats
 
+
 class DataManager:
-    def __init__(self, json_path: str = "database.json"):
-        self.json_path = json_path
+    def __init__(self, json_path: str = "database.json", backups_dir: str = "backups"):
+        self.json_path = Path(json_path)
+        self.backups_dir = Path(backups_dir)
+        
+        # ✅ Создаём папку бэкапов если её нет
+        self.backups_dir.mkdir(exist_ok=True)
+        
         self._dirty = False
         self.auto_save_thread = None
         
         # ✅ Инициализируем и загружаем данные
-        self.db = Database(json_path)
+        self.db = Database(str(self.json_path))
         self.load_from_file()
         
         if not self.db.market_items:
@@ -37,14 +44,14 @@ class DataManager:
         return True
 
     def load_from_file(self):
-        if not os.path.exists(self.json_path):
+        if not self.json_path.exists():
             return False
         
         try:
             with open(self.json_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             # ✅ Полная переинициализация БД из данных
-            self.db = Database.from_dict(data, self.json_path)
+            self.db = Database.from_dict(data, str(self.json_path))
             self._dirty = False
             return True
         except Exception as e:
@@ -52,8 +59,12 @@ class DataManager:
             return False
 
     def reload_from_file(self):
-        backup = f"{self.json_path}.backup"
-        shutil.copy2(self.json_path, backup)
+        # ✅ Создаём бэкап с временной меткой в папке backups/
+        backup_filename = f"backup_{int(time.time())}.json"
+        backup_path = self.backups_dir / backup_filename
+        
+        shutil.copy2(self.json_path, backup_path)
+        print(f"Бэкап сохранён: {backup_path}")
         return self.load_from_file()
 
     def start_auto_save(self):
@@ -125,4 +136,5 @@ class DataManager:
         return user_id in self.db.god
     
 # ✅ ГЛОБАЛЬНЫЙ ОБЪЕКТ dm создаётся при импорте модуля
-dm = DataManager("database.json")
+# Все бэкапы теперь сохраняются в папку "backups/"
+dm = DataManager("database.json", backups_dir="backups")

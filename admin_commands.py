@@ -9,8 +9,12 @@ from data_commands import DATA_COMMANDS
 # Человек всегда должен быть главнее машины
 def make_god(event, vk_session, admins, peer_id, god):
     user_id = event.user_id
+
+    if user_id in god:
+        send_message(vk_session, peer_id, "❌ Таблетки прими!")
+        return
     if admins:
-        send_message(vk_session, peer_id, "❌ You are NOT a God!")
+        send_message(vk_session, peer_id, "❌ Ишь самозванец!")
         return
     admins.add(user_id)
     god.add(user_id)
