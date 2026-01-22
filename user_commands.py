@@ -3,17 +3,17 @@ from storege.data_manager import dm # ✅ Глобальный dm
 
 
 def hi_command(event, vk_session, _, peer_id):
-    send_message(vk_session, peer_id, "Hi friend!")
+    send_message(vk_session, peer_id, "Хули ты на меня орёшь, блять?! Ты на ебало моё посмотри! Оно, блять, тупое, а не глухое нахрен!")
 
 
 def time_command(event, vk_session, _, peer_id):
-    send_message(vk_session, peer_id, f"⏰ Текущее время: {get_current_time()}")
+    send_message(vk_session, peer_id, f"⏰ Time on Host-server now: {get_current_time()}")
 
 
 def help_command(event, vk_session, admins, peer_id):
     user_id = event.user_id
     help_text = """📋 Команды:
-• hi • time • balance
+• time • balance
 • market • buy меч • sell меч
 • inventory"""
     
@@ -80,7 +80,7 @@ def inventory_command(event, vk_session, _, peer_id):
 
 
 USER_COMMANDS = {
-    "hi": hi_command, "time": time_command, "help": help_command,
+    "РАБОТАЙ": hi_command, "time": time_command, "help": help_command,
     "balance": balance_command, "market": market_command,
     "buy": buy_command, "sell": sell_command, "inventory": inventory_command
 }
