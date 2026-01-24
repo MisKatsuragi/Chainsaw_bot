@@ -1,6 +1,7 @@
 database_export.xlsx
 database.json
 config.py
+.venv/
 *.json
 *.backup
 __pycache__
