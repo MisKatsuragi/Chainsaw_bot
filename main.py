@@ -3,7 +3,7 @@ from vk_api.longpoll import VkLongPoll, VkEventType
 import sys
 import os
 import time
-from common_utils import send_message, get_peer_id, has_active_buffer, complete_user_buffer, cancel_user_buffer
+from common_utils import send_message, get_peer_id
 from storege.data_manager import dm  # ✅ Глобальный dm
 from user_commands import USER_COMMANDS
 from data_commands import DATA_COMMANDS
@@ -24,20 +24,6 @@ def handle_message(event):
     peer_id = get_peer_id(event)
     
     print(f"💬 {user_id} в {peer_id}: {msg}")
-    
-    # ✅ БУФЕРИЗАЦИЯ: проверяем активный буфер
-    if has_active_buffer(user_id):
-        if msg == "/cancel":
-            cancel_user_buffer(user_id, vk_session, peer_id)
-            return
-        elif complete_user_buffer(user_id, vk_session, peer_id):
-            return
-        else:
-            # Добавляем в буфер и выходим
-            from common_utils import add_buffer_step
-            add_buffer_step(user_id, msg)
-            send_message(vk_session, peer_id, "✅ Получено. Продолжайте...")
-            return
     
     # 1. Команда /god 
     if msg == "/god":
