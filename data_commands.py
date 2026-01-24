@@ -1,5 +1,5 @@
 from storege.load_data import LoadUsersData, ReloadUsersData
-from storege.excel_export import ExcelExport
+from storege.excel_import import import_market_from_excel
 from storege.data_manager import dm  # ✅ Глобальный dm
 
 
@@ -25,7 +25,7 @@ def get_forbes_message():
 DATA_COMMANDS = {
     "/load": lambda: LoadUsersData(dm),
     "/reload": lambda: ReloadUsersData(dm),
-    "/export": lambda: ExcelExport(dm),
+    "/export": lambda: import_market_from_excel(dm),
     "/stat": lambda: get_economy_stats_message(),
     "/forbs": lambda: get_forbes_message(),
 }

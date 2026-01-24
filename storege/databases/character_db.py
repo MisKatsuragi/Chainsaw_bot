@@ -33,7 +33,10 @@ class Character:
     self_description: str = ""
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        data = asdict(self)
+        data['inventory_items'] = list(self.inventory_items)
+        data['inventory_contracts'] = list(self.inventory_contracts)
+        return data
 
     @classmethod
     def from_dict(cls, data: dict) -> 'Character':

@@ -14,6 +14,7 @@ class DataManager:
         self.databases_dir = Path(databases_dir)
         self.databases_dir.mkdir(exist_ok=True)
         
+        # ✅ Обычные атрибуты - БЕЗ @property!
         self.items_db = ItemsDatabase(str(self.databases_dir / "items.json"))
         self.characters_db = CharactersDatabase(str(self.databases_dir / "characters.json"))
         self.contracts_db = ContractsDatabase(str(self.databases_dir / "contracts.json"))
@@ -23,7 +24,6 @@ class DataManager:
         self.start_auto_save()
         atexit.register(self.save_all)
 
-    # ✅ ИСПРАВЛЕННЫЕ @property - возвращают данные напрямую из roles_db
     @property
     def admins(self) -> Set[int]:
         return self.roles_db.admins 
@@ -58,7 +58,6 @@ class DataManager:
         self.auto_save_thread = threading.Thread(target=auto_save_loop, daemon=True)
         self.auto_save_thread.start()
 
-    # Остальные методы...
     def get_character(self, user_id: int) -> Optional[Character]:
         return self.characters_db.get_character(user_id)
 
@@ -78,5 +77,20 @@ class DataManager:
 
     def is_god(self, user_id: int) -> bool:
         return self.roles_db.is_god(user_id)
+
+    def add_market_item(self, item: Item) -> bool:
+        if self.items_db.add_item(item):
+            self.mark_dirty('items')
+            return True
+        return False
+
+    def get_stats(self):
+        return {
+            'users_count': len(getattr(self.characters_db, 'characters', {})),
+            'total_items': len(self.items_db.items),
+            'total_received': 0,
+            'total_spent': 0,
+            'rich_users': []
+        }
 
 dm = DataManager()
