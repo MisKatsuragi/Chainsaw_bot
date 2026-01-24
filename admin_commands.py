@@ -1,34 +1,31 @@
 import sys
-from common_utils import send_message, is_admin, parse_target_user, get_user_link
+from common_utils import send_message, parse_target_user, get_user_link
 from config import HOST
-from storege.data_manager import dm  # ✅ Правильный импорт
+from storege.data_manager import dm 
 from data_commands import DATA_COMMANDS
 
 
 # Назначение первого админа, в соответствии с законом робототехники 
 # Человек всегда должен быть главнее машины
-def make_god(event, vk_session, admins, peer_id, god):
+def make_god(event, vk_session, peer_id):
     user_id = event.user_id
 
-    if user_id in god:
+    if dm.is_god(user_id):
         send_message(vk_session, peer_id, "❌ Таблетки прими!")
         return
-    if admins:
+    if dm.is_admin(user_id):
         send_message(vk_session, peer_id, "❌ Ишь самозванец!")
         return
-    admins.add(user_id)
-    god.add(user_id)
-    dm.db.admins.add(user_id)  # ✅ Сохраняем в БД
-    dm.db.god.add(user_id)     # ✅ Сохраняем в БД
-    dm.set_user_position(user_id, "god")  # ✅ Сохраняем позицию
+    dm.roles_db.add_god(user_id)
+    dm.roles_db.add_admin(user_id)
     user_link = get_user_link(user_id)
     send_message(vk_session, peer_id, f"✅ {user_link} = GOD!")
     print(f"Создатель: {user_id}")
 
 
 # Выключение бота на хосте
-def shut_down(event, vk_session, admins, peer_id):
-    if not is_admin(event.user_id, admins): 
+def shut_down(event, vk_session, peer_id):
+    if not dm.is_god(event.user_id):
         send_message(vk_session, peer_id, "Ты шо охуел?")
         return
     send_message(vk_session, peer_id, "Бот выключен")
@@ -36,22 +33,24 @@ def shut_down(event, vk_session, admins, peer_id):
 
 
 # Общие данные о беседе
-def status_command(event, vk_session, admins, peer_id):
-    stats = dm.get_stats()  # ✅ Используем dm.get_stats()
+def status_command(event, vk_session, peer_id):
     god_id = list(dm.god)[0] if dm.god else None
-    god_link = get_user_link(god_id)
+    god_link = get_user_link(god_id) if god_id else "Не назначен"
+    characters_count = len(dm.characters_db.characters)
+    market_items_count = len(dm.items_db.items)
     send_message(vk_session, peer_id, 
         f"Host: {HOST}\n"
         f"👑 **Бог**: {god_link}\n"
-        f"👥 Админов: {len(admins)}\n"
-        f"👤 Пользователей: {stats['users_count']}\n"  # ✅ dm.users
-        f"🛒 Рынок: {stats['market_count']}\n"          # ✅ dm.market_items
-        f"💰 Общий баланс: {stats['total_received']:,}")
+        f"👥 Админов: {len(dm.admins)}\n"
+        f"👤 Персонажей: {characters_count}\n"
+        f"🛒 Рынок: {market_items_count}\n"
+        f"💰 Йен в игре: {sum(c.yen for c in dm.characters_db.characters.values())}")
 
 
-def handle_data_command(event, vk_session, admins, peer_id):
+
+def handle_data_command(event, vk_session, peer_id):
     """Обработчик команд DATA_COMMANDS"""
-    if not is_admin(event.user_id, admins):
+    if not dm.is_admin(event.user_id) and not dm.is_god(event.user_id): 
         return
     
     command = event.text.split()[0]
@@ -60,9 +59,9 @@ def handle_data_command(event, vk_session, admins, peer_id):
         send_message(vk_session, peer_id, result)
 
 
-# Дать пользователю денег
-def give_command(event, vk_session, admins, peer_id):
-    if not is_admin(event.user_id, admins):
+# Дать йен персонажу
+def give_command(event, vk_session, peer_id):
+    if not dm.is_admin(event.user_id):
         send_message(vk_session, peer_id, "❌ Нет прав")
         return
     
@@ -71,21 +70,19 @@ def give_command(event, vk_session, admins, peer_id):
         target_id = parse_target_user(text, event)
         target_link = get_user_link(target_id)
         parts = text.split()
-        coins = int(parts[-1])
+        yen = int(parts[-1])
+        character = dm.get_or_create_character(target_id, f"User{target_id}")
+        character.yen += yen
         
-        user = dm.get_user(target_id)  # ✅ dm.get_user
-        user.coins += coins
-        user.stats.total_received += coins  # ✅ Обновляем статистику
-        send_message(vk_session, peer_id, f"✅ +{coins} монет пользователю {target_link}")
-        # ✅ Отмечаем изменения для сохранения
-        dm.mark_dirty()
+        send_message(vk_session, peer_id, f"✅ +{yen}¥ персонажу {target_link}")
+        print(f"Админ выдал {yen}¥ пользователю {target_id}")
     except:
         send_message(vk_session, peer_id, "❓ /give [ссылка] 100")
 
 
-# Забрать у пользователя деньги
-def pick_command(event, vk_session, admins, peer_id):
-    if not is_admin(event.user_id, admins):
+# Забрать йен у персонажа
+def pick_command(event, vk_session, peer_id):
+    if not dm.is_admin(event.user_id): 
         send_message(vk_session, peer_id, "❌ Нет прав")
         return
     
@@ -94,33 +91,46 @@ def pick_command(event, vk_session, admins, peer_id):
         target_id = parse_target_user(text, event)
         target_link = get_user_link(target_id)
         parts = text.split()
-        coins = int(parts[-1])
+        yen = int(parts[-1])
         
-        user = dm.get_user(target_id)  # ✅ dm.get_user
-        if user.coins >= coins:
-            user.coins -= coins
-            send_message(vk_session, peer_id, f"✅ -{coins} монет у пользователя {target_link}")
-            # ✅ Отмечаем изменения для сохранения
-            dm.mark_dirty()
+        character = dm.get_or_create_character(target_id, f"User{target_id}")
+        if character.yen >= yen:
+            character.yen -= yen
+            send_message(vk_session, peer_id, f"✅ -{yen}¥ у персонажа {target_link}")
         else:
-            send_message(vk_session, peer_id, f"❌ У пользователя только {user.coins}")
+            send_message(vk_session, peer_id, f"❌ У персонажа только {character.yen}¥")
     except:
         send_message(vk_session, peer_id, "❓ /pick [ссылка] 100")
 
 
-# Добавить новый предмет на рынок
-def additem_command(event, vk_session, admins, peer_id):
-    if not is_admin(event.user_id, admins):
+# Добавить предмет на рынок
+def additem_command(event, vk_session, peer_id):
+    if not dm.is_admin(event.user_id): 
         send_message(vk_session, peer_id, "❌ Нет прав")
         return
     
     try:
         parts = event.text.split(maxsplit=3)
-        name, cost, desc = parts[1], int(parts[2]), parts[3]
-        index = dm.add_market_item(name, cost, desc)  # ✅ dm.add_market_item
-        send_message(vk_session, peer_id, f"✅ #{index}: {name} добавлен!")
-    except:
-        send_message(vk_session, peer_id, "❓ /additem <name> <cost> <desc>")
+        if len(parts) < 4:
+            send_message(vk_session, peer_id, "❓ /additem <name> <cost> <category> <desc>")
+            return
+            
+        name, cost, category, desc = parts[1], int(parts[2]), parts[3], parts[4]
+        
+        from storege.databases.items_db import Item
+        item = Item(
+            identifier=f"{name[:3].upper()}{len(dm.items_db.items)+1}",
+            name=name,
+            category=category,
+            cost=cost
+        )
+        
+        if dm.add_market_item(item):
+            send_message(vk_session, peer_id, f"✅ #{item.identifier}: {name} добавлен!")
+        else:
+            send_message(vk_session, peer_id, "❌ Предмет уже существует")
+    except Exception as e:
+        send_message(vk_session, peer_id, f"❌ Ошибка: {e}")
 
 
 ADMIN_COMMANDS = {

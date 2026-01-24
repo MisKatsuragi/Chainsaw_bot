@@ -1,141 +1,82 @@
-import sys
-import os
 import json
 import threading
 import time
 import atexit
-import shutil
 from pathlib import Path
-from typing import Dict, List, Optional
-from database import Database, Item, UserData, UserStats
-
+from typing import Optional, Set
+from .databases.items_db import ItemsDatabase, Item 
+from .databases.character_db import CharactersDatabase, Character 
+from .databases.contracts_db import ContractsDatabase, Contract
+from .databases.roles_db import RolesDatabase
 
 class DataManager:
-    def __init__(self, json_path: str = "database.json", backups_dir: str = "backups"):
-        self.json_path = Path(json_path)
-        self.backups_dir = Path(backups_dir)
+    def __init__(self, databases_dir: str = "databases"):
+        self.databases_dir = Path(databases_dir)
+        self.databases_dir.mkdir(exist_ok=True)
         
-        # ✅ Создаём папку бэкапов если её нет
-        self.backups_dir.mkdir(exist_ok=True)
+        self.items_db = ItemsDatabase(str(self.databases_dir / "items.json"))
+        self.characters_db = CharactersDatabase(str(self.databases_dir / "characters.json"))
+        self.contracts_db = ContractsDatabase(str(self.databases_dir / "contracts.json"))
+        self.roles_db = RolesDatabase(str(self.databases_dir / "roles.json"))
         
-        self._dirty = False
-        self.auto_save_thread = None
-        
-        # ✅ Инициализируем и загружаем данные
-        self.db = Database(str(self.json_path))
-        self.load_from_file()
-        
-        if not self.db.market_items:
-            self.db.init_market()
-            
+        self._dirty = {'items': False, 'characters': False, 'contracts': False, 'roles': False}
         self.start_auto_save()
-        atexit.register(self.save_to_file)
+        atexit.register(self.save_all)
 
-    def mark_dirty(self):
-        self._dirty = True
+    # ✅ ИСПРАВЛЕННЫЕ @property - возвращают данные напрямую из roles_db
+    @property
+    def admins(self) -> Set[int]:
+        return self.roles_db.admins 
 
-    def save_to_file(self):
-        if not self._dirty:
-            return False
-        
-        data = self.db.to_dict()
-        with open(self.json_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        self._dirty = False
-        return True
+    @property
+    def god(self) -> Set[int]:
+        return self.roles_db.god 
 
-    def load_from_file(self):
-        if not self.json_path.exists():
-            return False
-        
-        try:
-            with open(self.json_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            # ✅ Полная переинициализация БД из данных
-            self.db = Database.from_dict(data, str(self.json_path))
-            self._dirty = False
-            return True
-        except Exception as e:
-            print(f"Ошибка загрузки данных: {e}")
-            return False
+    def mark_dirty(self, db_type: str):
+        if db_type in self._dirty:
+            self._dirty[db_type] = True
 
-    def reload_from_file(self):
-        # ✅ Создаём бэкап с временной меткой в папке backups/
-        backup_filename = f"backup_{int(time.time())}.json"
-        backup_path = self.backups_dir / backup_filename
-        
-        shutil.copy2(self.json_path, backup_path)
-        print(f"Бэкап сохранён: {backup_path}")
-        return self.load_from_file()
+    def save_all(self):
+        if self._dirty['items']:
+            self.items_db.save()
+            self._dirty['items'] = False
+        if self._dirty['characters']:
+            self.characters_db.save()
+            self._dirty['characters'] = False
+        if self._dirty['contracts']:
+            self.contracts_db.save()
+            self._dirty['contracts'] = False
+        if self._dirty['roles']:
+            self.roles_db.save()
+            self._dirty['roles'] = False
 
     def start_auto_save(self):
         def auto_save_loop():
             while True:
-                time.sleep(1800)  # 30 минут
-                self.save_to_file()
-        
+                time.sleep(3600)
+                self.save_all()
         self.auto_save_thread = threading.Thread(target=auto_save_loop, daemon=True)
         self.auto_save_thread.start()
 
-    def get_stats(self) -> Dict:
-        stats = self.db.get_stats()
-        rich_users = sorted(self.db.users.items(), 
-                          key=lambda x: x[1].coins, reverse=True)[:10]
-        stats['rich_users'] = rich_users
-        return stats
-    
-    def get_forbes_message(self) -> dict:
-        rich_users = sorted(self.db.users.items(), 
-                          key=lambda x: x[1].coins, reverse=True)[:10]
-        return rich_users
+    # Остальные методы...
+    def get_character(self, user_id: int) -> Optional[Character]:
+        return self.characters_db.get_character(user_id)
 
-    # Прокси-методы для удобства
-    def get_user(self, user_id: int):
-        user = self.db.get_user(user_id)
-        self.mark_dirty()
-        return user
+    def get_or_create_character(self, user_id: int, name: str) -> Character:
+        char = self.characters_db.create_or_get_character(user_id, name)
+        self.mark_dirty('characters')
+        return char
 
-    def buy_item(self, user_id: int, identifier: str) -> str:
-        result = self.db.buy_item(user_id, identifier)
-        self.mark_dirty()
-        return result
+    def get_item(self, identifier: str) -> Optional[Item]:
+        return self.items_db.get_item(identifier)
 
-    def sell_item(self, user_id: int, identifier: str) -> str:
-        result = self.db.sell_item(user_id, identifier)
-        self.mark_dirty()
-        return result
-
-    def add_market_item(self, name: str, cost: int, description: str) -> int:
-        result = self.db.add_market_item(name, cost, description)
-        self.mark_dirty()
-        return result
-
-    def set_user_position(self, user_id: int, position: str):
-        self.db.set_user_position(user_id, position)
-        self.mark_dirty()
-
-    @property
-    def market_items(self) -> List:
-        return self.db.market_items
-
-    @property
-    def users(self) -> Dict:
-        return self.db.users
-    
-    @property
-    def admins(self) -> set:
-        return self.db.admins
-
-    @property
-    def god(self) -> set:
-        return self.db.god
+    def get_items_by_category(self, category: str) -> list:
+        return self.items_db.get_items_by_category(category)
 
     def is_admin(self, user_id: int) -> bool:
-        return user_id in self.db.admins or user_id in self.db.god
+        return self.roles_db.is_admin(user_id)
 
     def is_god(self, user_id: int) -> bool:
-        return user_id in self.db.god
-    
-# ✅ ГЛОБАЛЬНЫЙ ОБЪЕКТ dm создаётся при импорте модуля
-# Все бэкапы теперь сохраняются в папку "backups/"
-dm = DataManager("database.json", backups_dir="../backups")
+        return self.roles_db.is_god(user_id)
+
+dm = DataManager()

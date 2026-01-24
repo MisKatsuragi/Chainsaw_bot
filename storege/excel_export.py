@@ -2,7 +2,7 @@ import sys
 import os
 from openpyxl import Workbook
 from .data_manager import DataManager, dm
-from database import Item
+from .databases.items_db import ItemsDatabase, Item
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
