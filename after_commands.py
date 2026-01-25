@@ -15,17 +15,17 @@ class AfterCommandManager:
         self.handlers_dir = Path(handlers_dir)
         self.handlers_dir.mkdir(exist_ok=True)
         
-        # ✅ Как DataManager управляет базами данных
+        # Управляет базами команд
         self._commands: Dict[int, AfterCommandState] = {}
         self._handlers: Dict[str, Callable] = {}
         self._registered_modules: Set[str] = set()
         
-        # ✅ Автозагрузка handlers при первом обращении
+        # Автозагрузка handlers при первом обращении
         self._auto_load_handlers()
     
     def _auto_load_handlers(self):
         """Автозагрузка всех модулей handlers"""
-        modules = ['market', 'inventory', 'trades']  # ✅ Можно расширять
+        modules = ['handlers.market', 'handlers.inventory', 'handlers.contracts'] # нужно расширять
         
         for module_name in modules:
             try:
@@ -71,7 +71,7 @@ class AfterCommandManager:
             if handled:
                 return True
         
-        # ✅ Автоочистка выполненных команд
+        # Автоочистка выполненных команд
         self.clear_command(user_id)
         print(f"🗑️ Очищена команда {user_id}: {state.command_type}")
         return True
@@ -100,5 +100,5 @@ class AfterCommandManager:
         }
 
 
-# ✅ Глобальный экземпляр как в DataManager
+# Глобальный экземпляр как в DataManager
 after_manager = AfterCommandManager()

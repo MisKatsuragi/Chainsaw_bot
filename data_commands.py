@@ -14,7 +14,7 @@ def get_economy_stats_message() -> str:
     return msg
 
 def get_forbes_message():
-    stats = dm.get_stats()  # Используем get_stats() вместо get_forbes_message()
+    stats = dm.get_stats() 
     msg = "💎 **Топ-10 богатых**:\n"
     for i, (user_id, user_data) in enumerate(stats['rich_users'], 1):
         position = user_data.stats.position
@@ -25,7 +25,7 @@ def get_forbes_message():
 DATA_COMMANDS = {
     "/load": lambda: LoadUsersData(dm),
     "/reload": lambda: ReloadUsersData(dm),
-    "/export": lambda: import_market_from_excel(dm),
+    "/importmarket": lambda: import_market_from_excel(),
     "/stat": lambda: get_economy_stats_message(),
     "/forbs": lambda: get_forbes_message(),
 }

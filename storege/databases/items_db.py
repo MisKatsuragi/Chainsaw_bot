@@ -1,28 +1,31 @@
-# storege/databases/items_db.py
+# storege/databases/items_db.py 
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 import json
 from dataclasses import dataclass, asdict, field
 from typing import TYPE_CHECKING
 
-# ✅ TYPE_CHECKING предотвращает циклические импорты
 if TYPE_CHECKING:
     from .character_db import Character
 
 @dataclass
 class Item:
+    # Объязательные свойства
+    category: str
     identifier: str
     name: str
-    category: str
-    cost: int
+    
+    # Свойства с дефолтными значениями
+    cost: int = 0
     damage: int = 0
     penetration: int = 0
     protection: int = 0
     damage_reduction: int = 0
     recovery: int = 0
     overflow: int = 0
-    used_player_stats: Set[str] = field(default_factory=set)
     usecondition: int = 0
+    description: str = ""
+    used_player_stats: Set[str] = field(default_factory=set)
     max_player_stats: Dict[str, int] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
@@ -32,27 +35,39 @@ class Item:
 
     @classmethod
     def from_dict(cls, data: dict) -> 'Item':
-        """✅ ИСПРАВЛЕНО: Игнорирует неизвестные поля типа 'type'"""
-        # ✅ ФИЛЬТРУЕМ неизвестные поля (type, description, etc.)
-        known_fields = {
-            'identifier', 'name', 'category', 'cost', 'damage', 'penetration', 
-            'protection', 'damage_reduction', 'recovery', 'overflow', 
-            'used_player_stats', 'usecondition', 'max_player_stats'
+        item_data = {
+            'category': data.get('category', ''),
+            'identifier': data.get('identifier', ''),
+            'name': data.get('name', ''),
+            'cost': int(data.get('cost', 0)),
+            'damage': int(data.get('damage', 0)),
+            'penetration': int(data.get('penetration', 0)),
+            'protection': int(data.get('protection', 0)),
+            'damage_reduction': int(data.get('damage_reduction', 0)),
+            'recovery': int(data.get('recovery', 0)),
+            'overflow': int(data.get('overflow', 0)),
+            'usecondition': int(data.get('usecondition', 0)),
+            'description': data.get('description', ''),
         }
+        item_data['used_player_stats'] = set(data.get('used_player_stats', []))
+        item_data['max_player_stats'] = data.get('max_player_stats', {})
+        return cls(**item_data)
     
-        # Берем ТОЛЬКО известные поля
-        filtered_data = {k: v for k, v in data.items() if k in known_fields}
-    
-        item = cls(**filtered_data)
-        item.used_player_stats = set(data.get('used_player_stats', []))
-        item.max_player_stats = data.get('max_player_stats', {})
-        return item
+    def get_formatted_stats(self) -> list[str]:
+        stats = []
+        if self.damage: stats.append(f"+Урон:{self.damage}")
+        if self.protection: stats.append(f"+Защита:{self.protection}")
+        if self.recovery: stats.append(f"+Восст:{self.recovery}")
+        if self.overflow: stats.append(f"+Оверхил:{self.overflow}")
+        if self.damage_reduction: stats.append(f"-Снижение:{self.damage_reduction}")
+        if self.penetration: stats.append(f"-Пробитие:{self.penetration}")
+        return stats
 
 
 class ItemsDatabase:
     def __init__(self, db_path: str):
         self.db_path = Path(db_path)
-        self._items: Dict[str, Item] = {}  # ✅ ИСПРАВЛЕНО: _items вместо items
+        self._items: Dict[str, Item] = {}
         self.load()
 
     def load(self):
@@ -61,7 +76,7 @@ class ItemsDatabase:
                 with open(self.db_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                 self._items = {identifier: Item.from_dict(item_data) 
-                             for identifier, item_data in data.items()}
+                              for identifier, item_data in data.items()}
                 print(f"✅ Загружено {len(self._items)} предметов")
             except Exception as e:
                 print(f"⚠️ Ошибка загрузки items_db: {e}")
@@ -99,5 +114,4 @@ class ItemsDatabase:
 
     @property
     def items(self) -> Dict[str, Item]:
-        """✅ ТОЛЬКО ЧТЕНИЕ - для DataManager"""
         return self._items

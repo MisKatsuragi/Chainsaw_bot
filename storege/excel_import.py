@@ -1,10 +1,9 @@
-# storege/excel_import.py
+# storage/excel_import.py
 import pandas as pd
 from pathlib import Path
 import re
 from .data_manager import dm
 from .databases.items_db import Item
-
 
 class ExcelMarketImporter:
     def __init__(self, excel_path: str = "Market.xlsx"):
@@ -19,199 +18,158 @@ class ExcelMarketImporter:
         }
     
     def import_market(self) -> str:
-        """Импорт с ПОЛНОЙ ОТЛАДКОЙ"""
         print(f"🔍 Ищем файл: {self.excel_path.absolute()}")
-        
         if not self.excel_path.exists():
-            return f"❌ Market.xlsx не найден по пути: {self.excel_path.absolute()}"
+            return f"❌ Файл не найден: {self.excel_path.absolute()}"
         
         try:
-            print("📖 Читаем Excel...")
             df = pd.read_excel(self.excel_path, header=None)
-            print(f"✅ Excel прочитан! Размер: {df.shape}")
-            print("📊 Первые 10 ячеек:")
-            print(df.iloc[:10, :5].to_string())
+            print(f"✅ Excel: {df.shape}")
+            print("📊 Первые строки:")
+            print(df.iloc[:10, :3].to_string())
             
             items_added = self._parse_excel(df)
             return f"✅ Импортировано {items_added} предметов!"
-            
         except Exception as e:
-            return f"❌ Ошибка импорта: {str(e)}"
+            return f"❌ Ошибка: {str(e)}"
 
     def _parse_excel(self, df) -> int:
-        """ГЛАВНЫЙ МЕТОД ПАРСЕРА"""
         items_added = 0
         row_idx = 0
         
         while row_idx < len(df):
-            # Ищем заголовок категории (Cold, Fire, Helpful)
-            cell_value = str(df.iloc[row_idx, 0]).strip().upper()
-            
-            if cell_value in self.category_map:
-                category_key = cell_value.lower()
-                category_name = self.category_map[category_key]
-                print(f"\n🎯 НАЙДЕНА КАТЕГОРИЯ: {category_name} (строка {row_idx})")
-                
-                # Парсим предметы в этой категории (со след. строки, все столбцы)
-                items_added += self._parse_category(df, row_idx + 1, category_name)
-            
+            cell = str(df.iloc[row_idx, 0]).strip().upper()
+            if cell in self.category_map:
+                category = self.category_map[cell.lower()]
+                print(f"\n🎯 КАТЕГОРИЯ: {category} (строка {row_idx})")
+                items_added += self._parse_category(df, row_idx + 1, category)
             row_idx += 1
-        
         return items_added
 
     def _parse_category(self, df, start_row: int, category: str) -> int:
-        """Парсит все предметы в категории (по столбцам)"""
+        """Читает предметы ПО СТРОКАМ начиная со 2-го столбца"""
         items_added = 0
-        col_idx = 1  # Начинаем со 2-го столбца (0-й = название категории)
         
-        print(f"🔍 Парсим категорию '{category}' с {start_row} строки...")
-        
-        while col_idx < len(df.columns):
-            item_data = self._parse_item_column(df, start_row, col_idx, category)
+        for col_idx in range(1, len(df.columns)):  # со 2-го столбца
+            item_data = self._read_item_row(df, start_row, col_idx, category)
             if item_data:
                 item = self._create_item(item_data, category)
-                if dm.add_market_item(item):  # ✅ Нужно добавить в DataManager
+                if dm.add_market_item(item):
                     items_added += 1
-                    print(f"✅ ДОБАВЛЕН: {item.name} #{item.identifier}")
-                else:
-                    print(f"⚠️ НЕ ДОБАВЛЕН (дубль): {item.name}")
-            
-            col_idx += 1
+                    print(f"✅ {item.name} #{item.identifier}")
         
         return items_added
 
-    def _parse_item_column(self, df, start_row: int, col_idx: int, category: str) -> dict:
-        """✅ парсинг столбца для структуры Excel"""
+    def _read_item_row(self, df, start_row: int, col_idx: int, category: str) -> dict:
+        """ТОЧНЫЕ позиции Excel"""
         item_data = {'category': category}
-        row_idx = start_row
-        properties = {}
-        
-        print(f"   📦 Парсим столбец {col_idx}...")
-        
-        while row_idx < len(df) and row_idx < start_row + 30:
-            cell_value = str(df.iloc[row_idx, col_idx]).strip()
-            
-            if pd.isna(df.iloc[row_idx, col_idx]) or not cell_value:
-                row_idx += 1
-                continue
-                
-            print(f"     {row_idx}: '{cell_value}'")
-            
-            # ✅ ПОЛНЫЙ словарь соответствий Excel → Item поля
-            prop_map = {
-                'название': 'name',
-                'стоимость': 'cost',
-                'урон': 'damage',
-                'пробитие': 'penetration',
-                'защита': 'protection',
-                'снижение урона': 'damage_reduction',
-                'лечение': 'recovery',
-                'аттрибуты': 'used_player_stats',
-                'тип': 'type',
-                'использование': 'usecondition',
-                'максимальное значение ловкости': 'max_player_stats',
-                'максимальное значение': 'max_player_stats',
-                'оверхил': 'overflow',
-                'охил': 'overflow',
-                'описание': 'description'
-            }
-            
-            prop_key = None
-            for excel_name, standard_name in prop_map.items():
-                if cell_value.lower().startswith(excel_name.lower()):
-                    prop_key = standard_name
-                    break
-            
-            if prop_key:
-                # Следующая строка = значение свойства
-                if row_idx + 1 < len(df):
-                    value = str(df.iloc[row_idx + 1, col_idx]).strip()
-                    properties[prop_key] = value
-                    print(f"      → {prop_key}: '{value}'")
-                    row_idx += 2  # Пропускаем название+значение
-                    continue
-            
-            # Первое непустое = название предмета
-            if 'name' not in item_data and 'название' not in properties:
-                item_data['name'] = cell_value
-                print(f"      → Название предмета: {cell_value}")
-                
-            row_idx += 1
-        
-        # Переносим все свойства в item_data
-        item_data.update(properties)
-        
-        # Минимальная проверка
-        if item_data.get('name') or item_data.get('название'):
-            print(f"✅ Найден предмет: {item_data.get('name', item_data.get('название', '???'))}")
-            return item_data
-        
-        print(f"   ❌ Столбец {col_idx} пустой")
-        return None
+        safe_int = lambda val: int(str(val).strip()) if str(val).strip().isdigit() else 0
+    
+        values = []
+        for i in range(8):
+            row = start_row + i
+            if row >= len(df): break
+            val = str(df.iloc[row, col_idx]).strip()
+            if pd.isna(df.iloc[row, col_idx]) or val.lower() == 'nan':
+                val = ""
+            values.append(val)
+    
+        print(f"📦 col={col_idx}: {values}")
+    
+        name = values[0].strip()
+        if not name or name.lower() == "final":
+            return None
+    
+        # ТОЧНЫЕ позиции типов
+        if category == "Холодное оружие":
+            # 0.Название 1.Стоимость 2.Урон 3.Пробитие 4.Защита 5.Атрибуты 6.Тип 7.Описание
+            item_type_pos = 6
+            item_data.update({
+                'cost': safe_int(values[1]),
+                'damage': safe_int(values[2]),
+                'penetration': safe_int(values[3]),
+                'protection': safe_int(values[4]),
+                'used_player_stats': values[5] or ""
+            })
+    
+        elif category == "Огнестрельное оружие":
+            # 0.Название 1.Стоимость 2.Урон 3.Пробитие 4.Атрибуты 5.Тип 6.Использование 7.Описание
+            item_type_pos = 5  # ТИП на позиции 5!
+            item_data.update({
+                'cost': safe_int(values[1]),
+                'damage': safe_int(values[2]),
+                'penetration': safe_int(values[3]),
+                'used_player_stats': values[4] or "",
+                'usecondition': safe_int(values[6])
+            })
+    
+        elif category == "Вспомогательное снаряжение":
+            # 0.Название 1.Стоимость 2.Снижение 3.Ловкость 4.Лечение 5.Оверхил 6.Тип 7.Использование
+            item_type_pos = 6
+            item_data.update({
+                'cost': safe_int(values[1]),
+                'damage_reduction': safe_int(values[2]),
+                'max_player_stats': {'Ловкость': safe_int(values[3])},
+                'recovery': safe_int(values[4]),
+                'overflow': safe_int(values[5]),
+                'usecondition': safe_int(values[7]) if len(values) > 7 else 0
+            })
+    
+        # ТИП ТОЧНО из ячейки
+        item_type_raw = values[item_type_pos] if len(values) > item_type_pos else ""
+        item_type = item_type_raw.strip()
+    
+        item_data.update({
+            'name': name,  # ЧИСТОЕ название
+            'type': item_type,  # ПОЛНЫЙ тип из Excel
+            'description': values[7] if len(values) > 7 else ""
+        })
+    
+        print(f"✅ RAW: '{name}' | ТИП:'{item_type}' (pos={item_type_pos})")
+        return item_data
+
 
     def _create_item(self, data: dict, category: str) -> Item:
-        """✅ ПОЛНОЕ создание Item со ВСЕМИ полями"""
-        name = data.get('name') or data.get('название', 'Без названия')
-        
-        # ✅ ИСПРАВЛЕННАЯ генерация ID
-        base_id = re.sub(r'[^A-ZА-Я0-9]', '', name)[:4].upper()
-        item_count = len(dm.items_db.items)
-        identifier = f"{base_id}{item_count + 1:03d}"
-        
-        # Безопасное преобразование в int
-        def safe_int(val, default=0):
-            try:
-                return int(str(val).strip())
-            except (ValueError, TypeError):
-                return default
-        
-        # ✅ Парсинг атрибутов → used_player_stats (Set[str])
-        attrs_str = data.get('used_player_stats', '')
-        used_stats = set()
-        if attrs_str:
-            # "Ловкость,Сила" → {'Ловкость', 'Сила'}
-            attrs_list = re.split(r'[,\s]+', str(attrs_str).strip())
-            used_stats = {attr.strip() for attr in attrs_list if attr.strip()}
-        
-        # ✅ Парсинг max_player_stats (Dict[str, int])
-        max_stats = {}
-        max_stats_str = data.get('max_player_stats', '')
-        if max_stats_str:
-            stat_name = str(max_stats_str).lower()
-            value = safe_int(max_stats_str)
-            if 'ловк' in stat_name or 'dex' in stat_name:
-                max_stats['Ловкость'] = value
-            elif 'сила' in stat_name or 'str' in stat_name:
-                max_stats['Сила'] = value
-        
-        # ✅ Создание Item со ВСЕМИ полями
+        """Item БЕЗ дублирования [Тип]"""
+        name = data.get('name', 'Без названия').strip()
+        item_type = data.get('type', '').strip()
+    
+        #  ID
+        clean_name = re.sub(r'[^A-ZА-Я0-9]', '', name)[:4].upper()
+        identifier = f"{clean_name}{len(dm.items_db.items) + 1:03d}"
+    
+        # Атрибуты
+        attrs = data.get('used_player_stats', '')
+        used_stats = set(re.split(r'[,\s;]+', str(attrs)) if attrs else [])
+        used_stats = {s.strip() for s in used_stats if s.strip()}
+    
+        # НАЗВАНИЕ БЕЗ [Тип] + добавляем ТОЛЬКО если тип есть
+        final_name = name
+        if item_type:
+            # Удаляем старые скобки если есть
+            final_name = re.sub(r'\[.*?\]', '', name).strip()
+            final_name = f"{final_name} [{item_type}]"
+    
         item = Item(
+            category=category,
             identifier=identifier,
-            name=name,
-            category=category,  # ✅ Критично для фильтрации
-            cost=safe_int(data.get('cost', 0)),
-            damage=safe_int(data.get('damage', 0)),
-            penetration=safe_int(data.get('penetration', 0)),
-            protection=safe_int(data.get('protection', 0)),
-            damage_reduction=safe_int(data.get('damage_reduction', 0)),
-            recovery=safe_int(data.get('recovery', 0)),
-            overflow=safe_int(data.get('overflow', 0)),
-            used_player_stats=used_stats,  # ✅ Для фильтрации по атрибутам
-            usecondition=safe_int(data.get('usecondition', 0)),
-            max_player_stats=max_stats  # ✅ Максимальные статы
+            name=final_name,
+            cost=data.get('cost', 0),
+            damage=data.get('damage', 0),
+            penetration=data.get('penetration', 0),
+            protection=data.get('protection', 0),
+            damage_reduction=data.get('damage_reduction', 0),
+            recovery=data.get('recovery', 0),
+            overflow=data.get('overflow', 0),
+            description=data.get('description', ''),
+            used_player_stats=used_stats,
+            usecondition=data.get('usecondition', 0),
+            max_player_stats=data.get('max_player_stats', {})
         )
-        
-        # ✅ Сохранение типа в названии для UI фильтрации
-        item_type = data.get('type', 'Неизвестно')
-        if item_type and item_type != 'Неизвестно':
-            item.name = f"{name} [{item_type}]"
-        
-        print(f"🎯 Создан Item: {item.identifier} | {item.name} | Тип: {item_type} | Категория: {category}")
+    
+        print(f"🎯 {item.identifier}: '{item.name}' [Тип:{item_type}]")
         return item
 
-
-# ✅ Точка входа для тестирования
 def import_market_from_excel(excel_path: str = "Market.xlsx") -> str:
-    """Удобная функция для вызова из других модулей"""
     importer = ExcelMarketImporter(excel_path)
     return importer.import_market()

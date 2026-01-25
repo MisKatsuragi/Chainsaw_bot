@@ -5,7 +5,7 @@ import vk_api
 from vk_api.longpoll import VkLongPoll, VkEventType
 from common_utils import send_message, get_peer_id
 from storege.data_manager import dm
-from after_commands import after_manager  # ✅ Импорт в начале
+from after_commands import after_manager 
 from user_commands import USER_COMMANDS
 from data_commands import DATA_COMMANDS
 from admin_commands import ADMIN_COMMANDS, handle_data_command
@@ -46,8 +46,6 @@ def handle_message(event):
                 GOD_COMMANDS[cmd](event, vk_session, peer_id)
             elif cmd in ADMIN_COMMANDS:
                 ADMIN_COMMANDS[cmd](event, vk_session, peer_id)
-            else:
-                send_message(vk_session, peer_id, "❓ Неизвестная команда")
         else:
             send_message(vk_session, peer_id, "❌ Нет прав")
         return
@@ -59,7 +57,7 @@ def handle_message(event):
             return
         
     # 5. AFTER_COMMANDS ПЕРЕХВАТ
-    if after_manager.has_pending(user_id):  # ✅ Используем метод вместо глобального словаря
+    if after_manager.has_pending(user_id): 
         print(f"🚀 AFTER_HANDLER для {user_id}")
         if after_manager.handle_after_command(event, vk_session, peer_id, {}):
             print("✅ AFTER_COMMAND обработан")
@@ -67,6 +65,7 @@ def handle_message(event):
 
 
 print("🚀 Бот запущен!")
+
 while True:
     try:
         for event in longpoll.listen():
