@@ -15,7 +15,7 @@ class DataManager:
         self.databases_dir = Path(databases_dir)
         self.databases_dir.mkdir(exist_ok=True)
         
-        # ✅ Обычные атрибуты - БЕЗ @property!
+        # Обычные атрибуты - БЕЗ @property!
         self.items_db = ItemsDatabase(str(self.databases_dir / "items.json"))
         self.characters_db = CharactersDatabase(str(self.databases_dir / "characters.json"))
         self.contracts_db = ContractsDatabase(str(self.databases_dir / "contracts.json"))
@@ -86,9 +86,14 @@ class DataManager:
         return False
 
     def get_stats(self):
+        items_by_category = {}
+        for item in self.items_db.items.values():
+            cat = item.category
+            items_by_category[cat] = items_by_category.get(cat, 0) + 1
         return {
-            'users_count': len(getattr(self.characters_db, 'characters', {})),
+            'users_count': len(self.characters_db.characters), 
             'total_items': len(self.items_db.items),
+            'categories': dict(sorted(items_by_category.items(), key=lambda x: x[1], reverse=True)),
             'total_received': 0,
             'total_spent': 0,
             'rich_users': []

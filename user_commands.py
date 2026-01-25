@@ -1,5 +1,5 @@
 from common_utils import send_message, get_current_time
-from market import market_command
+from handlers.market import market_command
 from storege.data_manager import dm
 from storege.databases.items_db import Item
 from storege.databases.character_db import Character
