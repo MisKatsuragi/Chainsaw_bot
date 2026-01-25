@@ -9,6 +9,7 @@ from .databases.character_db import CharactersDatabase, Character
 from .databases.contracts_db import ContractsDatabase, Contract
 from .databases.roles_db import RolesDatabase
 
+
 class DataManager:
     def __init__(self, databases_dir: str = "databases"):
         self.databases_dir = Path(databases_dir)
@@ -92,5 +93,6 @@ class DataManager:
             'total_spent': 0,
             'rich_users': []
         }
+
 
 dm = DataManager()

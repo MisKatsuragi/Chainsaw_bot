@@ -1,10 +1,11 @@
+import os
+import sys
+import time
 import vk_api
 from vk_api.longpoll import VkLongPoll, VkEventType
-import sys
-import os
-import time
 from common_utils import send_message, get_peer_id
-from storege.data_manager import dm  # ✅ Глобальный dm
+from storege.data_manager import dm
+from after_commands import after_manager  # ✅ Импорт в начале
 from user_commands import USER_COMMANDS
 from data_commands import DATA_COMMANDS
 from admin_commands import ADMIN_COMMANDS, handle_data_command
@@ -18,12 +19,14 @@ longpoll = VkLongPoll(vk_session)
 
 itsMe = True
 
+
 def handle_message(event):
     msg = event.text.strip()
     user_id = event.user_id
     peer_id = get_peer_id(event)
     
-    print(f"💬 {user_id} в {peer_id}: {msg}")
+    print(f"💬 {user_id}: {msg}")
+    print(f"🔍 after_handler.has_pending({user_id}): {after_manager.has_pending(user_id)}")
     
     # 1. Команда /god 
     if msg == "/god":
@@ -35,7 +38,7 @@ def handle_message(event):
         handle_data_command(event, vk_session, peer_id)
         return
     
-    # 3. КП команды (все /команды)
+    # 3. Админ команды (все /команды)
     if msg.startswith('/'):
         if dm.is_admin(user_id):
             cmd = msg.split()[0]
@@ -50,10 +53,18 @@ def handle_message(event):
         return
     
     # 4. Пользовательские команды
-    for cmd_name, func in USER_COMMANDS.items():  # ✅ cmd_name, func = распаковка
+    for cmd_name, func in USER_COMMANDS.items():
         if msg == cmd_name or msg.startswith(cmd_name + ' '):
-            func(event, vk_session, peer_id)  
+            func(event, vk_session, peer_id)
             return
+        
+    # 5. AFTER_COMMANDS ПЕРЕХВАТ
+    if after_manager.has_pending(user_id):  # ✅ Используем метод вместо глобального словаря
+        print(f"🚀 AFTER_HANDLER для {user_id}")
+        if after_manager.handle_after_command(event, vk_session, peer_id, {}):
+            print("✅ AFTER_COMMAND обработан")
+            return
+
 
 print("🚀 Бот запущен!")
 while True:

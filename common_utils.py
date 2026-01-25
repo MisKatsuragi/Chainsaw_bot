@@ -5,10 +5,6 @@ from typing import Dict, Optional, Callable
 from datetime import datetime, timedelta
 from storege.data_manager import dm
 
-# BUFFERS - буферизация команд пользователей
-USER_BUFFERS: Dict[int, dict] = {}
-BUFFER_TIMEOUT = timedelta(minutes=3)  # 3 минуты на ввод команды
-
 def send_message(vk_session, peer_id, message):
     """Универсальная отправка сообщений"""
     vk_session.method("messages.send", {
