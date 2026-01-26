@@ -87,16 +87,20 @@ class DataManager:
 
     def get_stats(self):
         items_by_category = {}
+        # ✅ ПРОВЕРЯЕМ наличие персонажей
+        characters = self.characters_db.characters
+        total_yen_on_hands = sum(char.yen for char in characters.values()) if characters else 0  
+        total_yen_received = sum(char.total_yen_received for char in characters.values()) if characters else 0  
+        total_yen_spent = sum(char.total_yen_spend for char in characters.values()) if characters else 0  
         for item in self.items_db.items.values():
             cat = item.category
             items_by_category[cat] = items_by_category.get(cat, 0) + 1
         return {
-            'users_count': len(self.characters_db.characters), 
+            'users_count': len(self.characters_db.characters),
             'total_items': len(self.items_db.items),
-            'categories': dict(sorted(items_by_category.items(), key=lambda x: x[1], reverse=True)),
-            'total_received': 0,
-            'total_spent': 0,
-            'rich_users': []
+            'total_yen': total_yen_on_hands,
+            'total_received': total_yen_received,
+            'total_spent': total_yen_spent,
         }
 
 
