@@ -7,8 +7,8 @@ from .items_db import Item
 @dataclass
 class Character:
     user_id: int  # Идентификатор
-    name: str
-    rank: str
+    name: str = ""
+    rank: str = ""
     level: int = 1
     faction: str = ""
     char_class: str = ""
@@ -27,7 +27,9 @@ class Character:
     inventory_items: Set[str] = field(default_factory=set)  # Артикулы предметов
     inventory_contracts: Set[str] = field(default_factory=set)  # ID контрактов
     
-    yen: int = 0
+    yen: int = 0   
+    total_yen_spend: int = 0  
+    total_yen_received: int = 0    
     flesh_particles: int = 0
     total_flesh_particles: int = 0
     self_description: str = ""

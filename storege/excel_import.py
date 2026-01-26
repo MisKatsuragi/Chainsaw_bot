@@ -130,25 +130,29 @@ class ExcelMarketImporter:
 
 
     def _create_item(self, data: dict, category: str) -> Item:
-        """Item БЕЗ дублирования [Тип]"""
+        """Item с простыми числовыми артикулами 001, 002..."""
         name = data.get('name', 'Без названия').strip()
         item_type = data.get('type', '').strip()
     
-        #  ID
-        clean_name = re.sub(r'[^A-ZА-Я0-9]', '', name)[:4].upper()
-        identifier = f"{clean_name}{len(dm.items_db.items) + 1:03d}"
+        # ✅ ПРОСТЫЕ ЧИСЛОВЫЕ АРТИКУЛЫ начиная с 001
+        next_id = len(dm.items_db.items) + 1
+        identifier = f"{next_id:03d}"  # 001, 002, 003...
+    
+        # Проверка уникальности
+        while dm.get_item(identifier):
+            next_id += 1
+            identifier = f"{next_id:03d}"
+    
+        # Остальная логика названия...
+        final_name = name
+        if item_type:
+            final_name = re.sub(r'\[.*?\]', '', name).strip()
+            final_name = f"{final_name} [{item_type}]"
     
         # Атрибуты
         attrs = data.get('used_player_stats', '')
         used_stats = set(re.split(r'[,\s;]+', str(attrs)) if attrs else [])
         used_stats = {s.strip() for s in used_stats if s.strip()}
-    
-        # НАЗВАНИЕ БЕЗ [Тип] + добавляем ТОЛЬКО если тип есть
-        final_name = name
-        if item_type:
-            # Удаляем старые скобки если есть
-            final_name = re.sub(r'\[.*?\]', '', name).strip()
-            final_name = f"{final_name} [{item_type}]"
     
         item = Item(
             category=category,
@@ -167,7 +171,7 @@ class ExcelMarketImporter:
             max_player_stats=data.get('max_player_stats', {})
         )
     
-        print(f"🎯 {item.identifier}: '{item.name}' [Тип:{item_type}]")
+        print(f"🎯 {item.identifier}: '{item.name}'")
         return item
 
 def import_market_from_excel(excel_path: str = "Market.xlsx") -> str:
