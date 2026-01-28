@@ -1,6 +1,7 @@
 import re
 from common_utils import send_message, get_current_time, format_item_short, format_item_full
 from handlers.market import market_command
+from handlers.inventory import buy_item_command, sell_item_command, describe_item_command
 from handlers.character_handler import change_name_command, change_description_command, create_profile_command, character_profile_command
 from storege.data_manager import dm
 from storege.databases.items_db import Item
@@ -33,32 +34,6 @@ def inventory_command(event, vk_session, peer_id):
     inv_text += f"\n💰 Йен: {character.yen}"
     send_message(vk_session, peer_id, inv_text)
 
-
-def describe_item_command(event, vk_session, peer_id):
-    """Описание предмета #артикул"""
-    text_lower = event.text.lower().strip()
-    
-    if not text_lower.startswith("описание"):
-        return False
-    
-    match = re.search(r'#(\w+)', event.text)
-    if not match:
-        send_message(vk_session, peer_id, "❓ описание #артикул")
-        return True
-    
-    identifier = match.group(1).upper()
-    item = dm.get_item(identifier)
-    
-    print(f"🔍 Описание для #{identifier}")
-    
-    if item:
-        send_message(vk_session, peer_id, format_item_full(item))
-    else:
-        send_message(vk_session, peer_id, f"❌ #{identifier} не найден")
-    
-    return True
-
-
 # ✅ ИСПРАВЛЕННЫЙ словарь команд - БЕЗ конфликтов!
 USER_COMMANDS = {
     "РАБОТАЙ": hi_command,
@@ -67,6 +42,12 @@ USER_COMMANDS = {
     "bag": inventory_command,
     "инвентарь": inventory_command,
     "описание": describe_item_command, 
+
+    # 🛒 Покупка/Продажа
+    "купить": buy_item_command,
+    "buy": buy_item_command,
+    "продать": sell_item_command,
+    "sell": sell_item_command, 
     
     # ✅ Профиль - ТОЛЬКО просмотр
     "profile": character_profile_command,

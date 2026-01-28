@@ -26,6 +26,6 @@ DATA_COMMANDS = {
     "/load": lambda: LoadUsersData(dm),
     "/reload": lambda: ReloadUsersData(dm),
     "/importmarket": lambda: import_market_from_excel(),
-    "/stat": lambda: get_economy_stats_message(),
+    "/экономика": lambda: get_economy_stats_message(),
     "/forbs": lambda: get_forbes_message(),
 }

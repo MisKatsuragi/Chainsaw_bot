@@ -13,7 +13,7 @@ def character_profile_command(event, vk_session, peer_id):
         return
     
     profile_text = f"👤 **Профиль персонажа**\n\n"
-    profile_text += f"🆔 ID: {character.user_id}\n"
+    #profile_text += f"🆔 ID: {character.user_id}\n"
     profile_text += f"👤 Имя: {character.name}\n"
     profile_text += f"⭐ Ранг: {character.rank}\n"
     profile_text += f"⚡ Уровень: {character.level}\n"
@@ -135,7 +135,7 @@ def change_rank_command(event, vk_session, peer_id):
 
 
 # ========== СМЕНА ЧИСЛОВЫХ ПОЛЕЙ ==========
-def change_numeric_field(field_name, field_display, min_val=0, max_val=None, event, vk_session, peer_id):
+def change_numeric_field(field_name, event, vk_session, peer_id):
     """Универсальная функция смены числовых полей"""
     character = dm.characters_db.get_character(event.user_id)
     if not character:
@@ -150,21 +150,12 @@ def change_numeric_field(field_name, field_display, min_val=0, max_val=None, eve
     try:
         new_value = int(text_parts[1].strip())
     except ValueError:
-        send_message(vk_session, peer_id, f"❌ {field_display} должно быть числом!")
-        return
-    
-    if new_value < min_val:
-        send_message(vk_session, peer_id, f"❌ {field_display} не может быть меньше {min_val}!")
-        return
-    
-    if max_val and new_value > max_val:
-        send_message(vk_session, peer_id, f"❌ {field_display} не может быть больше {max_val}!")
         return
     
     setattr(character, field_name, new_value)
     dm.characters_db.save_character(character)
     
-    send_message(vk_session, peer_id, f"✅ **{field_display} изменено!**\n{field_display} **{new_value}**")
+    send_message(vk_session, peer_id, f"✅ **{field_name} изменено!**\n{field_name} **{new_value}**")
 
 
 def change_yen_command(event, vk_session, peer_id):
@@ -174,47 +165,47 @@ def change_yen_command(event, vk_session, peer_id):
 
 def change_flesh_particles_command(event, vk_session, peer_id):
     """частицы 5"""
-    change_numeric_field("flesh_particles", "👹 Частицы плоти", min_val=0, event=event, vk_session=vk_session, peer_id=peer_id)
+    change_numeric_field("flesh_particles", "👹 Частицы плоти", event=event, vk_session=vk_session, peer_id=peer_id)
 
 
 def change_level_command(event, vk_session, peer_id):
     """уровень 10"""
-    change_numeric_field("level", "⚡ Уровень", min_val=1, max_val=100, event=event, vk_session=vk_session, peer_id=peer_id)
+    change_numeric_field("level", "⚡ Уровень", event=event, vk_session=vk_session, peer_id=peer_id)
 
 
 def change_toughness_command(event, vk_session, peer_id):
     """здоровье 15"""
-    change_numeric_field("toughness", "❤️ Здоровье", min_val=1, max_val=50, event=event, vk_session=vk_session, peer_id=peer_id)
+    change_numeric_field("toughness", "❤️ Здоровье", event=event, vk_session=vk_session, peer_id=peer_id)
 
 
 def change_strength_command(event, vk_session, peer_id):
     """сила 10"""
-    change_numeric_field("strength", "💪 Сила", min_val=1, max_val=30, event=event, vk_session=vk_session, peer_id=peer_id)
+    change_numeric_field("strength", "💪 Сила", event=event, vk_session=vk_session, peer_id=peer_id)
 
 
 def change_reflexes_command(event, vk_session, peer_id):
     """рефлексы 8"""
-    change_numeric_field("reflexes", "⚡ Рефлексы", min_val=1, max_val=30, event=event, vk_session=vk_session, peer_id=peer_id)
+    change_numeric_field("reflexes", "⚡ Рефлексы",  event=event, vk_session=vk_session, peer_id=peer_id)
 
 
 def change_perception_command(event, vk_session, peer_id):
     """восприятие 12"""
-    change_numeric_field("perception", "👁️ Восприятие", min_val=1, max_val=30, event=event, vk_session=vk_session, peer_id=peer_id)
+    change_numeric_field("perception", "👁️ Восприятие", event=event, vk_session=vk_session, peer_id=peer_id)
 
 
 def change_intellect_command(event, vk_session, peer_id):
     """интеллект 15"""
-    change_numeric_field("intellect", "🧠 Интеллект", min_val=1, max_val=30, event=event, vk_session=vk_session, peer_id=peer_id)
+    change_numeric_field("intellect", "🧠 Интеллект", event=event, vk_session=vk_session, peer_id=peer_id)
 
 
 def change_charisma_command(event, vk_session, peer_id):
     """харизма 7"""
-    change_numeric_field("charisma", "🗣️ Харизма", min_val=1, max_val=30, event=event, vk_session=vk_session, peer_id=peer_id)
+    change_numeric_field("charisma", "🗣️ Харизма", event=event, vk_session=vk_session, peer_id=peer_id)
 
 
 def change_luck_command(event, vk_session, peer_id):
     """удача 9"""
-    change_numeric_field("luck", "🍀 Удача", min_val=1, max_val=20, event=event, vk_session=vk_session, peer_id=peer_id)
+    change_numeric_field("luck", "🍀 Удача", event=event, vk_session=vk_session, peer_id=peer_id)
 
 
 # ========== ПРОФИЛЬНЫЕ КОМАНДЫ ==========
