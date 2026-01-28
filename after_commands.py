@@ -1,3 +1,4 @@
+import time
 from typing import Dict, Optional, Callable, Set
 from dataclasses import dataclass
 from pathlib import Path
@@ -8,6 +9,7 @@ class AfterCommandState:
     user_id: int
     command_type: str
     data: dict = None
+    timeout_time: float = 0
 
 
 class AfterCommandManager:
@@ -17,6 +19,7 @@ class AfterCommandManager:
         
         # Управляет базами команд
         self._commands: Dict[int, AfterCommandState] = {}
+        self._timeouts: Dict[int, float] = {}
         self._handlers: Dict[str, Callable] = {}
         self._registered_modules: Set[str] = set()
         
@@ -42,6 +45,35 @@ class AfterCommandManager:
     def register_handler(self, command_type: str, handler: Callable):
         """Регистрация handler (аналог mark_dirty)"""
         self._handlers[command_type] = handler
+
+    def set_timeout(self, user_id: int, seconds: int):
+        """Установка таймаута для пользователя"""
+        self._timeouts[user_id] = time.time() + seconds
+        print(f"⏰ Таймаут для {user_id}: {seconds}с")
+    
+    def clear_timeout(self, user_id: int):
+        """Очистка таймаута пользователя"""
+        if user_id in self._timeouts:
+            del self._timeouts[user_id]
+    
+    def check_timeouts(self):
+        """Проверка истекших таймаутов"""
+        current_time = time.time()
+        expired_users = []
+        
+        for user_id, timeout_time in self._timeouts.items():
+            if current_time > timeout_time:
+                expired_users.append(user_id)
+        
+        for user_id in expired_users:
+            self.clear_command(user_id)
+            self.clear_timeout(user_id)
+            print(f"⏰ Таймаут истек для {user_id}")
+    
+    def has_pending(self, user_id: int) -> bool:
+        """Проверка наличия отложенной команды с учетом таймаута"""
+        self.check_timeouts()  # Проверяем таймауты перед проверкой
+        return user_id in self._commands
     
     def add_command(self, user_id: int, command_type: str, data: dict = None):
         """Добавление отложенной команды (аналог get_or_create_character)"""

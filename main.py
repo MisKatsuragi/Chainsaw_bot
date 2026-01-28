@@ -27,6 +27,8 @@ def handle_message(event):
     
     print(f"💬 {user_id}: {msg}")
     print(f"🔍 after_handler.has_pending({user_id}): {after_manager.has_pending(user_id)}")
+    # ✅ Проверяем таймауты перед обработкой
+    after_manager.check_timeouts()
     
     # 1. Команда /god 
     if msg == "/god":
@@ -52,7 +54,8 @@ def handle_message(event):
     
     # 4. Пользовательские команды
     for cmd_name, func in USER_COMMANDS.items():
-        if msg == cmd_name or msg.startswith(cmd_name + ' '):
+        if msg.lower().startswith(cmd_name.lower()):
+        #if msg == cmd_name or msg.startswith(cmd_name + ' '):
             func(event, vk_session, peer_id)
             return
         

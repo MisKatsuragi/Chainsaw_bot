@@ -1,9 +1,10 @@
 # market.py 
+import re
 from typing import Dict, List, Optional
 from storege.data_manager import dm
 from storege.databases.items_db import Item
-from common_utils import send_message
-import re
+from common_utils import send_message, format_item_short, format_item_full
+
 
 SUBCATEGORIES = {
     "Холодное оружие": ["Кинжал", "Тесак", "Меч", "Дробящее", "Копьё", "Хлодное стрелковое"],
@@ -21,6 +22,9 @@ CATEGORIES = {
     "огонь": "Огнестрельное оружие"
 }
 
+# ✅ Команды выхода из магазина
+EXIT_COMMANDS = {"exit", "выход", "назад", "стоп", "отмена"}
+
 def market_command(event, vk_session, peer_id):
     """🏪 Главное меню"""
     market_text = """🏪 МАРКЕТ
@@ -34,14 +38,15 @@ def market_command(event, vk_session, peer_id):
     
     from after_commands import after_manager
     after_manager.add_command(event.user_id, "market.category")
+    after_manager.set_timeout(event.user_id, 60)
     return True
 
 def handle_category_cmd(event, vk_session, peer_id, state):
     """Обработка категории"""
     text = event.text.lower().strip()
     
-    # Команда выхода всегда работает
-    if text == "exit":
+    # ✅ Команда выхода всегда работает
+    if text in EXIT_COMMANDS:
         return exit_market_command(event, vk_session, peer_id, state)
     
     if text not in CATEGORIES:
@@ -64,6 +69,7 @@ def handle_category_cmd(event, vk_session, peer_id, state):
         
         from after_commands import after_manager
         after_manager.add_command(event.user_id, "market.subcategory", {"category": category})
+        after_manager.set_timeout(event.user_id, 60)
         return True
     
     # Нет подкатегорий - показываем все
@@ -75,18 +81,15 @@ def handle_category_cmd(event, vk_session, peer_id, state):
         resp_text += format_item_short(item) + "\n\n"
     resp_text += "\nℹ️ описание #артикул"
     send_message(vk_session, peer_id, resp_text)
+    after_manager.set_timeout(event.user_id, 60)
     return True
 
 def handle_subcategory_cmd(event, vk_session, peer_id, state):
     text = event.text.strip().lower()
     
-    # Команда выхода всегда работает
-    if text == "exit":
+    # ✅ Команда выхода всегда работает
+    if text in EXIT_COMMANDS:
         return exit_market_command(event, vk_session, peer_id, state)
-    
-    if text == "назад":
-        market_command(event, vk_session, peer_id)
-        return True
     
     try:
         subcat_num = int(text)
@@ -115,31 +118,9 @@ def handle_subcategory_cmd(event, vk_session, peer_id, state):
     
     text += "ℹ️ описание #артикул"
     send_message(vk_session, peer_id, text)
-    return True
-
-def handle_description_cmd(event, vk_session, peer_id, state):
-    """ команда описание"""
-    text_lower = event.text.lower().strip()
-    
-    # ТОЧНОЕ совпадение "описание #ID"
-    if not text_lower.startswith("описание"):
-        return False
-    
-    match = re.search(r'#(\w+)', event.text)
-    if not match:
-        send_message(vk_session, peer_id, "❓ описание #артикул")
-        return True
-    
-    identifier = match.group(1).upper()
-    item = dm.items_db.get_item(identifier)
-    
-    print(f"🔍 Описание для #{identifier}")
-    
-    if item:
-        send_message(vk_session, peer_id, format_item_full(item))
-    else:
-        send_message(vk_session, peer_id, f"❌ #{identifier} не найден")
-    
+    # ✅ Продлеваем таймаут
+    from after_commands import after_manager
+    after_manager.set_timeout(event.user_id, 60)
     return True
 
 def exit_market_command(event, vk_session, peer_id, state):
@@ -152,60 +133,8 @@ def exit_market_command(event, vk_session, peer_id, state):
 
 after_handlers = {
     "market.category": handle_category_cmd,
-    "market.subcategory": handle_subcategory_cmd,
-    "market.description": handle_description_cmd 
+    "market.subcategory": handle_subcategory_cmd
 }
-
-def format_item_short(item: Item) -> str:
-    lines = [f"#{item.identifier} {item.name}"]
-    lines.append(f"💰 {item.cost}¥")
-    
-    stats = []
-    if item.damage: stats.append(f"Урон:{item.damage}")
-    if item.penetration: stats.append(f"Пр:{item.penetration}")
-    if item.protection: stats.append(f"Защ:{item.protection}")
-    if item.damage_reduction: stats.append(f"Сниж:{item.damage_reduction}")
-    if item.recovery: stats.append(f"Восст:{item.recovery}")
-    if item.overflow: stats.append(f"Оверх:{item.overflow}")
-    if item.usecondition: stats.append(f"Исп:{item.usecondition}") 
-    
-    if stats:
-        lines.append("|".join(stats))
-    
-    if item.used_player_stats:
-        lines.append(f"⚡ {', '.join(item.used_player_stats)}")
-    
-    return "\n".join(lines)
-
-def format_item_full(item: Item) -> str:
-    """Полное описание С описанием"""
-    text = f"📦 {item.name}\n"
-    text += f"🏷️ #{item.identifier} | 💰 {item.cost}¥\n"
-    text += f"📂 {item.category}\n\n"
-    
-    stats = []
-    if item.damage: stats.append(f"⚔️ Урон: {item.damage}")
-    if item.penetration: stats.append(f"💥 Пр: {item.penetration}")
-    if item.protection: stats.append(f"🛡️ Защ: {item.protection}")
-    if item.damage_reduction: stats.append(f"🛡️ Сниж: {item.damage_reduction}")
-    if item.recovery: stats.append(f"💉 Восст: {item.recovery}")
-    if item.overflow: stats.append(f"💥 Оверх: {item.overflow}")
-    if item.usecondition: stats.append(f"🔧 Исп: {item.usecondition}")
-    
-    if stats:
-        text += "📊 Статы:\n" + "\n".join(stats) + "\n\n"
-    
-    if item.used_player_stats:
-        text += f"⚡ Требует: {', '.join(item.used_player_stats)}\n\n"
-    
-    if item.max_player_stats:
-        text += "📏 Макс статы:\n" + "\n".join([f"• {k}: {v}" for k,v in item.max_player_stats.items()]) + "\n\n"
-    
-    if item.description:
-        text += f"📝 {item.description}\n\n"
-    
-    text += "🛒 купить #артикул"
-    return text
 
 def extract_subcategory(name: str, category: str) -> str:
     """✅ Точное извлечение типа из [Тип]"""
