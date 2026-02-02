@@ -94,8 +94,15 @@ def change_string_field(field_name, field_display, event, vk_session, peer_id):
         return
     
     new_value = text_parts[1].strip()
-    if not new_value:
-        send_message(vk_session, peer_id, f"❌ {field_display} не может быть пустым!")
+    if new_value == "-":
+        if field_name == 'name':
+            user_info = vk_session.method("users.get", {"user_ids": event.user_id})[0]
+            user_name = f"{user_info['first_name']} {user_info['last_name']}"
+            setattr(character, field_name, user_name)
+            send_message(vk_session, peer_id, f"✅ Имя удалено")
+            return
+        setattr(character, field_name, "")
+        send_message(vk_session, peer_id, f"✅ {field_display} удалено")
         return
     
     setattr(character, field_name, new_value)

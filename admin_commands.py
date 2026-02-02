@@ -190,14 +190,16 @@ def userinfo_command(event, vk_session, peer_id):
         return
     
     try:
-        parts = event.text.strip().split(maxsplit=3)
+        parts = event.text.strip().split(maxsplit=2)
         if len(parts) < 3:
             send_message(vk_session, peer_id, 
                 "❓ **Формат:** `/userinfo <поле> <значение> [ссылка/ответ]`\n\n"
                 "📋 **Поля:** имя, фракция, класс, описание, профильссылка, ранг")
             return
         
-        field_name, value = parts[1].lower(), parts[2]
+        field_name = parts[1].lower()
+        # Значение - всё остальное после поля (может содержать пробелы и быть многословным)
+        value = parts[2].strip()
         target_id = parse_target_user(event.text, event)
         target_link = get_user_link(target_id)
         
@@ -241,14 +243,26 @@ def userinfo_command(event, vk_session, peer_id):
         
         db_field = field_mapping[field_name]
         
-        # Проверяем, что значение не пустое
-        if not value or value.strip() == "":
-            send_message(vk_session, peer_id, "❌ Значение не может быть пустым!")
-            return
-        
         # Получаем/создаем персонажа
         character = dm.characters_db.create_or_get_character(target_id, f"User{target_id}")
-        setattr(character, db_field, value.strip())
+        
+        # ✅ СБРОС ЗНАЧЕНИЯ ПО "-"
+        if value == "-":
+            if db_field == 'name':
+                user_info = vk_session.method("users.get", {"user_ids": target_id})[0]
+                user_name = f"{user_info['first_name']} {user_info['last_name']}"
+                value = user_name
+                setattr(character, db_field, value)
+                dm.characters_db.save_character(character)
+                send_message(vk_session, peer_id, f"✅ Имя удалено")
+                return
+            else:
+                setattr(character, db_field, "")
+                dm.characters_db.save_character(character)
+                send_message(vk_session, peer_id, f"✅ {db_field} удалено")
+                return
+            
+        setattr(character, db_field, value)
         dm.characters_db.save_character(character)
         
         # Отображаемые названия
