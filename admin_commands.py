@@ -1,5 +1,6 @@
 import sys
-from common_utils import send_message, parse_target_user, get_user_link
+import re
+from common_utils import send_message, parse_target_user, get_user_link, format_item_short
 from config import HOST
 from storege.data_manager import dm 
 from data_commands import DATA_COMMANDS
@@ -288,34 +289,69 @@ def userinfo_command(event, vk_session, peer_id):
         send_message(vk_session, peer_id, f"❌ Ошибка: {str(e)}")
 
 
-# Добавить предмет на рынок
-def additem_command(event, vk_session, peer_id):
-    if not dm.is_admin(event.user_id): 
-        send_message(vk_session, peer_id, "❌ Нет прав")
-        return
+def give_item_command(event, vk_session, peer_id):
+    """Дарование предмета #артикул"""
+    target_id = parse_target_user(event.text, event)
+    target_link = get_user_link(target_id)
+    text = event.text.strip()
+    match = re.search(r'#(\w+)', text)
     
-    try:
-        parts = event.text.split(maxsplit=3)
-        if len(parts) < 4:
-            send_message(vk_session, peer_id, "❓ /additem <name> <cost> <category> <desc>")
-            return
-            
-        name, cost, category, desc = parts[1], int(parts[2]), parts[3], parts[4]
+    if not match:
+        send_message(vk_session, peer_id, "❓")
+        return True
+    
+    identifier = match.group(1).upper()
+    character = dm.get_or_create_character(target_id, f"User{target_id}")
+    item = dm.get_item(identifier)
+    
+    if not item:
+        send_message(vk_session, peer_id, f"❌ #{identifier} не найден")
+        return True
+    
+    if identifier in character.inventory_items:
+        send_message(vk_session, peer_id, f"❌ #{identifier} уже есть в инвентаре")
+        return True
+    
+    character.inventory_items.add(identifier)
+    dm.characters_db.save_character(character)
         
-        from storege.databases.items_db import Item
-        item = Item(
-            identifier=f"{name[:3].upper()}{len(dm.items_db.items)+1}",
-            name=name,
-            category=category,
-            cost=cost
-        )
-        
-        if dm.add_market_item(item):
-            send_message(vk_session, peer_id, f"✅ #{item.identifier}: {name} добавлен!")
-        else:
-            send_message(vk_session, peer_id, "❌ Предмет уже существует")
-    except Exception as e:
-        send_message(vk_session, peer_id, f"❌ Ошибка: {e}")
+    send_message(vk_session, peer_id, 
+        f"🛒 **Дарован предмет**\n\n"
+            f"✅ {item.name}\n"
+            f"💰 Стоимость: {item.cost}¥\n"
+            f"{format_item_short(item)}")
+    return True
+
+
+def pick_item_command(event, vk_session, peer_id):
+    """Изъятие предмета #артикул"""
+    text = event.text.strip()
+    target_id = parse_target_user(event.text, event)
+    match = re.search(r'#(\w+)', text)
+    
+    if not match:
+        send_message(vk_session, peer_id, "❓ продать #артикул")
+        return True
+    
+    identifier = match.group(1).upper()
+    character = dm.get_or_create_character(target_id, f"User{target_id}")
+    
+    if identifier not in character.inventory_items:
+        send_message(vk_session, peer_id, f"❌ #{identifier} нет в инвентаре")
+        return True
+    
+    item = dm.get_item(identifier)
+    if not item:
+        send_message(vk_session, peer_id, f"❌ #{identifier} не найден")
+        return True
+    
+    character.inventory_items.remove(identifier)
+    dm.characters_db.save_character(character)
+    
+    send_message(vk_session, peer_id,
+        f"💰 **Предмет удалён**\n\n"
+        f"✅ Изъят {item.name}\n")
+    return True
 
 
 ADMIN_COMMANDS = {
@@ -323,9 +359,10 @@ ADMIN_COMMANDS = {
     "/status": status_command,
     "/give": give_command, 
     "/pick": pick_command,
-    "/additem": additem_command,
+    "/giveit": give_item_command,
+    "/pickit": pick_item_command,
     "/shutdown": shut_down,
     "/stat": stat_command,
     "/стат": stat_command,
-    "/userinfo": userinfo_command
+    "/pr": userinfo_command
 }
