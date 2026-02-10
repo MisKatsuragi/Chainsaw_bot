@@ -1,5 +1,6 @@
 from storege.load_data import LoadUsersData, ReloadUsersData
-from storege.excel_import import import_market_from_excel
+from storege.excel_import import import_market_from_excel, import_additional_market_from_excel
+from storege.character_import import import_characters_from_excel, import_additional_characters_from_excel
 from storege.economy_analyzer import ecm
 from storege.data_manager import dm
 from common_utils import send_message
@@ -81,6 +82,9 @@ DATA_COMMANDS = {
     "/load": lambda: LoadUsersData(dm),
     "/reload": lambda: ReloadUsersData(dm),
     "/importmarket": lambda: import_market_from_excel(),
+    "/importchar" : lambda: import_characters_from_excel(),
+    "/newItem" : lambda: import_additional_market_from_excel(),
+    "/newChar" : lambda: import_additional_characters_from_excel(),
     "/экономика": get_economy_stats_message,
     "/forbs": get_forbes_message,
     "/yen_top": top_yen_command,

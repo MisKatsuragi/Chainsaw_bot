@@ -1,9 +1,11 @@
-# storage/excel_import.py
+# storage/excel_import.py - ПОЛНЫЙ КОД с добавлением доп. импорта как метода класса
+
 import pandas as pd
 from pathlib import Path
 import re
 from .data_manager import dm
 from .databases.items_db import Item
+
 
 class ExcelMarketImporter:
     def __init__(self, excel_path: str = "Market.xlsx"):
@@ -16,8 +18,9 @@ class ExcelMarketImporter:
             "fire": "Огнестрельное оружие", 
             "helpful": "Вспомогательное снаряжение"
         }
-    
+ 
     def import_market(self) -> str:
+        """Основной импорт из основного файла"""
         print(f"🔍 Ищем файл: {self.excel_path.absolute()}")
         if not self.excel_path.exists():
             return f"❌ Файл не найден: {self.excel_path.absolute()}"
@@ -32,6 +35,30 @@ class ExcelMarketImporter:
             return f"✅ Импортировано {items_added} предметов!"
         except Exception as e:
             return f"❌ Ошибка: {str(e)}"
+
+    def import_additional_market(self, additional_path: str = "Market_Additional.xlsx") -> str:
+        """✅ ДОПОЛНИТЕЛЬНЫЙ импорт из ВТОРОГО файла"""
+        print(f"🔍 Ищем ДОПОЛНИТЕЛЬНЫЙ файл: {Path(additional_path).absolute()}")
+        
+        additional_path = Path(additional_path)
+        if not additional_path.exists():
+            return f"ℹ️ Дополнительный файл не найден: {additional_path.absolute()}"
+        
+        try:
+            # ✅ Считаем ДО и ПОСЛЕ
+            before_count = len(dm.items_db.items)
+            print(f"📊 Было предметов: {before_count}")
+            
+            # ✅ ТОТ ЖЕ САМЫЙ парсер
+            df = pd.read_excel(additional_path, header=None)
+            items_added = self._parse_excel(df)
+            
+            after_count = len(dm.items_db.items)
+            print(f"📊 Стало предметов: {after_count}")
+            
+            return f"✅ ДОПОЛНИТЕЛЬНЫЙ импорт: +{items_added} предметов!\n📦 Всего предметов: {after_count}"
+        except Exception as e:
+            return f"❌ Ошибка доп. импорта: {str(e)}"
 
     def _parse_excel(self, df) -> int:
         items_added = 0
@@ -128,32 +155,31 @@ class ExcelMarketImporter:
         print(f"✅ RAW: '{name}' | ТИП:'{item_type}' (pos={item_type_pos})")
         return item_data
 
-
     def _create_item(self, data: dict, category: str) -> Item:
         """Item с простыми числовыми артикулами 001, 002..."""
         name = data.get('name', 'Без названия').strip()
         item_type = data.get('type', '').strip()
-    
+ 
         # ✅ ПРОСТЫЕ ЧИСЛОВЫЕ АРТИКУЛЫ начиная с 001
         next_id = len(dm.items_db.items) + 1
         identifier = f"{next_id:03d}"  # 001, 002, 003...
-    
+
         # Проверка уникальности
         while dm.get_item(identifier):
             next_id += 1
             identifier = f"{next_id:03d}"
-    
+
         # Остальная логика названия...
         final_name = name
         if item_type:
             final_name = re.sub(r'\[.*?\]', '', name).strip()
             final_name = f"{final_name} [{item_type}]"
-    
+
         # Атрибуты
         attrs = data.get('used_player_stats', '')
         used_stats = set(re.split(r'[,\s;]+', str(attrs)) if attrs else [])
         used_stats = {s.strip() for s in used_stats if s.strip()}
-    
+ 
         item = Item(
             category=category,
             identifier=identifier,
@@ -170,10 +196,16 @@ class ExcelMarketImporter:
             usecondition=data.get('usecondition', 0),
             max_player_stats=data.get('max_player_stats', {})
         )
-    
+ 
         print(f"🎯 {item.identifier}: '{item.name}'")
         return item
 
+
+# ✅ ФУНКЦИИ-ОБЕРТКИ (остаются для обратной совместимости)
 def import_market_from_excel(excel_path: str = "Market.xlsx") -> str:
     importer = ExcelMarketImporter(excel_path)
     return importer.import_market()
+
+def import_additional_market_from_excel(excel_path: str = "Market_Additional.xlsx") -> str:
+    importer = ExcelMarketImporter("dummy.xlsx")  # путь не важен
+    return importer.import_additional_market(excel_path)

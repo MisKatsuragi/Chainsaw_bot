@@ -19,7 +19,7 @@ def character_profile_command(event, vk_session, peer_id):
     profile_text += f"⚡ Уровень: {character.level}\n"
     profile_text += f"🏛️ Фракция: {character.faction}\n"
     profile_text += f"🎭 Класс: {character.char_class}\n"
-    profile_text += f"🔗 Профиль: {character.profile_link or 'Не указан'}\n\n"
+    profile_text += f"🔗 Анкета: {character.profile_link or 'Не указан'}\n\n"
     
     profile_text += "📊 **Характеристики:**\n"
     profile_text += f"❤️ Здоровье: {'❤️' * character.toughness}\n"
